@@ -52,8 +52,7 @@ int main(int argc, char *argv[])
             else{
                 divide_row = rowA/nprocs;
                 remain_row = rowA%nprocs;
-                //printf("divide_row=%d remain_row=%d\n",divide_row,remain_row);
-
+        
                 //allocate matrix
                 matrixA = (int*)malloc(rowA * colA * sizeof(int));
                 matrixB = (int*)malloc(rowB * colB * sizeof(int));
@@ -93,7 +92,7 @@ int main(int argc, char *argv[])
     MPI_Bcast(&colA,1,MPI_INT,0,MPI_COMM_WORLD);
     MPI_Bcast(&rowB,1,MPI_INT,0,MPI_COMM_WORLD);
     MPI_Bcast(&colB,1,MPI_INT,0,MPI_COMM_WORLD);
-    printf("bcast finish! from rank %d\n",myrank);
+    printf("Rank %d >> Recieved column and row value\n",myrank);
 
     if (myrank!=0)
     {
@@ -102,7 +101,7 @@ int main(int argc, char *argv[])
     }
 
     MPI_Bcast(&matrixB[0],rowB*colB,MPI_INT,0,MPI_COMM_WORLD);
-    printf("Got matrix B from rank %d\n",myrank);
+    printf("Rank %d >> Got matrix B\n",myrank);
 
     matrixbufC = (int*)malloc(divide_row * rowB * sizeof(int));
 
@@ -111,15 +110,15 @@ int main(int argc, char *argv[])
         for (i=1; i<nprocs; i++) {
             MPI_Send(&matrixA[divide_row*colA*i],divide_row*colA, MPI_INT, i, 0, MPI_COMM_WORLD);
         }
-        printf("Sent matrix A successful\n");
+        printf("Rank 0 >> Sent matrix A successful\n");
     }
     else{ //other rank
 
         MPI_Recv(&matrixbufA[0],divide_row*colA, MPI_INT, 0, 0, MPI_COMM_WORLD,MPI_STATUS_IGNORE);
-        printf("Received matrix A from rank %d\n",myrank);
+        printf("Rank %d >> Received matrix A \n",myrank);
 
         //multiplication in other rank
-        printf("Start multiplication in rank %d\n",myrank);
+        printf("Rank %d >> Start multiplication \n",myrank);
         for(i=0;i<divide_row;i++){ //shift down row in A
             for(j=0; j < rowB; j++){ //shift down row in B
                 for(k = 0 ; k < colA; k++){
@@ -130,13 +129,10 @@ int main(int argc, char *argv[])
             }
         }
 
-        printf("Finish multiplication in rank %d\n",myrank);
+        printf("Rank %d >> Finish multiplication \n",myrank);
 
         MPI_Send(&matrixbufC[0],divide_row*rowB, MPI_INT, 0, 123, MPI_COMM_WORLD);
-        printf("Send result matrix from rank %d\n",myrank);
-
-        //free(matrixbufA);
-        //free(matrixbufC);
+        printf("Rank %d >> Send result matrix back to rank 0\n",myrank);
     }
 
     if(myrank==0)
@@ -152,7 +148,7 @@ int main(int argc, char *argv[])
                 sum = 0;
             }
         }
-        printf("Finish multiplication in rank %d\n",myrank);
+        printf("Rank %d >> Finish multiplication\n",myrank);
 
         if (remain_row!=0)
         {
@@ -167,20 +163,19 @@ int main(int argc, char *argv[])
                     sum = 0;
                 }
             }
-            printf("Finish multiplication in rank \n");
+            printf("Rank 0 >> Finish multiplication\n");
         }
 
         free(matrixA);
         free(matrixB);
 
-        for (i=1; i<nprocs; i++) { //other PART from other rank
+        for (i=1; i<nprocs; i++) { // rank 0 get the parts from other ranks
             MPI_Recv(&matrix_out[divide_row*rowB*i],divide_row*rowB, MPI_INT, i, 123, MPI_COMM_WORLD,MPI_STATUS_IGNORE);
         }
 
-        //write file
+        //write to file
         output = fopen(outputname,"w+");
-        fprintf(output,"%d %d",rowA,rowB);
-        fprintf(output, "\n");
+        fprintf(output,"%d %d\n",rowA,rowB);
         for(i=0;i<rowA;i++){
             for(j=0;j<rowB;j++)
                 fprintf(output, "%d ",matrix_out[(i*rowB)+j]);
@@ -191,7 +186,7 @@ int main(int argc, char *argv[])
         endTime = MPI_Wtime();
 
         fclose(output);
-        printf("FINISHED WRITING SUM TO FILE!! in %lf seconds\n", endTime - startTime);
+        printf("\nFINISHED WRITING SUM TO FILE!! in %lf seconds\n", endTime - startTime);
     }
 
     MPI_Finalize();
