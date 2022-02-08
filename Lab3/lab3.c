@@ -24,7 +24,9 @@ int main(int argc, char *argv[])
     int *matrixA,*matrixB,*matrix_out;
     int sum = 0;
     int i,j,k = 0;
-    char *fileAname= "matAsmall.txt",*fileBname= "matBsmall.txt",*outputname= "SolSmall.txt";
+    char *fileAname = "matAsmall.txt",
+         *fileBname = "matBsmall.txt",
+         *outputname = "SolSmall.txt";
 
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
@@ -45,43 +47,50 @@ int main(int argc, char *argv[])
             fscanf(fileB, "%d %d",&rowB,&colB);
             printf("Matrix 2: row = %d, column = %d\n",rowB,colB);
 
+            printf("\n#### Check multipliable of matrices ###############################\n");
             if (colA!=rowB){
-                printf("These two matrices can't be multiplied.\n");
+                printf("These two matrices can't be multiplied\n");
                 return 0;
             }
             else{
+                printf("These two matrices is multipliable\n");
                 divide_row = rowA/nprocs;
                 remain_row = rowA%nprocs;
-        
+
+                printf("\n#### Reading Matrix 1 #############################################\n");
                 //allocate matrix
                 matrixA = (int*)malloc(rowA * colA * sizeof(int));
-                matrixB = (int*)malloc(rowB * colB * sizeof(int));
-                matrix_out = (int*)malloc(rowA * colB * sizeof(int));
-                printf("allocate A B Result successful\n");
-
-                printf("#### Reading Matrix 1 #############################################\n");
+                printf("Successfully allocated!\n");
                 for(i=0; i<rowA; i++){
                     for(j=0; j<colA; j++){
                         fscanf(fileA, "%d", &matrixA[(i*colA)+j]);
                     }
                 }
                 fclose(fileA);
+                printf("Finished reading file A!\n");
 
-                printf("#### Reading Matrix 2 #############################################\n");
-                //read matrixB with transposing
+                printf("\n#### Reading Matrix 2 #############################################\n");
+                //allocate matrix
+                matrixB = (int*)malloc(rowB * colB * sizeof(int));
+                printf("Successfully allocated!\n");
+                //read with transposing
                 for(i=0; i<rowB; i++){
                     for(j=0; j<colB; j++){
                         fscanf(fileB, "%d", &matrixB[j*(rowB)+i]);
                     }
                 }
                 fclose(fileB);
+                printf("Finished reading file B!\n");
             
-                //swap row and column
-                int tempswap = 0;
+                //swap row and column of matrix B
+                int swap = 0;
                 
-                tempswap = rowB;
+                swap = rowB;
                 rowB = colB;
-                colB = tempswap;
+                colB = swap;
+
+                printf("\n#### Calculate Matrix #############################################\n");
+                matrix_out = (int*)malloc(rowA * colB * sizeof(int));
 
             }
         }
@@ -112,8 +121,7 @@ int main(int argc, char *argv[])
         }
         printf("Rank 0 >> Sent matrix A successful\n");
     }
-    else{ //other rank
-
+    else{ //other ranks
         MPI_Recv(&matrixbufA[0],divide_row*colA, MPI_INT, 0, 0, MPI_COMM_WORLD,MPI_STATUS_IGNORE);
         printf("Rank %d >> Received matrix A \n",myrank);
 
@@ -138,7 +146,7 @@ int main(int argc, char *argv[])
     if(myrank==0)
     {
         //multiplication in rank 0
-        printf("Start multiplication! rank 0\n");
+        printf("Rank 0 >> Start multiplication\n");
         for(i=0;i<divide_row;i++){
             for(j=0; j < rowB; j++){
                 for(k = 0 ; k < colA; k++){
@@ -173,7 +181,7 @@ int main(int argc, char *argv[])
             MPI_Recv(&matrix_out[divide_row*rowB*i],divide_row*rowB, MPI_INT, i, 123, MPI_COMM_WORLD,MPI_STATUS_IGNORE);
         }
 
-        //write to file
+        //write result to file
         output = fopen(outputname,"w+");
         fprintf(output,"%d %d\n",rowA,rowB);
         for(i=0;i<rowA;i++){
@@ -186,7 +194,9 @@ int main(int argc, char *argv[])
         endTime = MPI_Wtime();
 
         fclose(output);
-        printf("\nFINISHED WRITING SUM TO FILE!! in %lf seconds\n", endTime - startTime);
+        printf("\n#### Summary ######################################################\n");
+        printf("FINISHED WRITING RESULT MATRIX TO FILE!!\n"); 
+        printf("Time used: %lf seconds\n", endTime - startTime);
     }
 
     MPI_Finalize();
